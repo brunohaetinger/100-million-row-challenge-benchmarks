@@ -1,0 +1,15 @@
+*.class
+*.log
+target/
+project/target/
+.bsp/
+.scala-build/
+measurements.txt
+output.json
+test_small.txt
+.metals/
+.vscode/
+.idea/
+vendor/bundle/
+.bundle/
+*.gem
