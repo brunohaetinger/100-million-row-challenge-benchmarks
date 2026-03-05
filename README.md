@@ -1,6 +1,6 @@
-# 100-million-row-challenge-ruby
+# 100 Million Row Challenge - Multi-Language Benchmark
 
-Ruby implementation of the 100 million row challenge for processing web analytics data.
+This project benchmarks different language implementations for processing 100 million rows of web analytics data.
 
 ## Challenge
 
@@ -20,77 +20,77 @@ https://example.com/blog/scala-zio,2024-01-24T01:16:58+00:00
 }
 ```
 
-## Implementation
+## Benchmark Results (100M rows)
 
-Uses Ruby 3.1+ Ractors for true parallelism:
-- Ractors (Ruby Actors) for parallel processing without GIL
-- Chunked file reading for memory efficiency
-- Local aggregation per Ractor with final merge
-- Yajl for fast JSON serialization
-- Sorted JSON output
+| Rank | Implementation | Directory | Time |
+|------|----------------|-----------|------|
+| 🥇 | Rust | `rust/` | **0.491s** |
+| 🥈 | C++ | `cpp/` | **0.751s** |
+| 🥉 | Python-C++ Hybrid | `python-cpp/` | **1.1s** |
+| 4 | Bun | `bun/` | **18s** | 
+| 5 | Python | `python/` | **11s** | 
+| 6 | Ruby (fork) | `ruby/` | **13s** | 
+| 7 | Ruby (single) | `ruby/` | **84s** | 
 
-## Requirements
+## Shared Data
 
-- Ruby 3.1 or higher (for Ractor support)
-- Bundler gem
+- `measurements.txt` - Generated test data (100M rows, ~5.6GB)
+- `test_small.txt` - Small test file for validation (in each directory)
 
-## Installation
+## Quick Start
 
+### Python-C++ Hybrid (Fastest)
 ```bash
-bundle install
+cd python-cpp
+./run.sh test/test_small.txt    # Test
+./run.sh measurements.txt       # 100M rows (~1.1s)
 ```
 
-## Usage
-
-### Quick test
-
+### C++
 ```bash
-make test
+cd cpp
+./run.sh test/test_small.txt    # Test
+./run.sh measurements.txt       # 100M rows (~1s)
 ```
 
-This runs the implementation with a small test file to verify correctness.
-
-### Generate test data
-
+### Python
 ```bash
-make generate
+cd python
+./run.sh test/test_small.txt    # Test
+./run.sh measurements.txt       # 100M rows (~11s)
 ```
 
-This generates 100 million rows of test data in `measurements.txt`.
-
-Alternatively, specify a custom number of rows:
-
+### Bun
 ```bash
-./generate.sh 10000000
+cd bun
+./run.sh test/test_small.txt    # Test
+./run.sh measurements.txt       # 100M rows (~18s)
 ```
 
-### Run the challenge
-
+### Ruby
 ```bash
-make run
+cd ruby
+./run.sh test_small.txt         # Test
+./run.sh measurements.txt       # 100M rows (~13s)
 ```
 
-Or directly:
+## Generate Test Data
 
 ```bash
-./run.sh measurements.txt
+cd ruby && ./generate.sh 100000000  # Generate 100M rows (~5.6GB)
 ```
 
-### Clean
+## Key Insights
 
-```bash
-make clean
-```
+1. **Python-C++ Hybrid** wins - C++ parsing speed + Python simplicity
+2. **Pure C++** is fastest native implementation
+3. **Bun** surprisingly competitive for JS runtime
+4. **Python multiprocessing** solid (~11s)
+5. **Ruby fork** competitive with Python
+6. Zig reference remains the gold standard (~0.77s)
 
-## Performance
+## Individual Comparison Files
 
-Results will vary based on hardware. The implementation is optimized for:
-- True parallelism via Ractors (bypasses GIL)
-- Efficient memory usage with chunked processing
-- Fast JSON serialization with Yajl
-- Minimal object allocations during aggregation
+Each directory contains `COMPARISON.md` with detailed analysis.
 
-Expected performance on modern hardware:
-- 100M rows: ~2-5 seconds (depending on CPU cores and disk I/O)
-
-Compare with other implementations to evaluate Ruby performance.
+**Ready to benchmark!** 🚀
