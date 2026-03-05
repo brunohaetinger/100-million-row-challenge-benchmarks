@@ -1,0 +1,13 @@
+*.class
+*.log
+target/
+node_modules/
+*.bun
+bun.lockb
+dist/
+build/
+.idea/
+.vscode/
+measurements.txt
+output.json
+test_small.txt
