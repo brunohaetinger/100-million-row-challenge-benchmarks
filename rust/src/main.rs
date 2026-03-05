@@ -41,12 +41,20 @@ fn process_chunk(file_data: &[u8], start: usize, end: usize) -> AggregatedData {
             .map(|i| pos + i)
             .unwrap_or(end);
 
+        // Skip empty lines
         if line_end == pos {
             pos = line_end + 1;
             continue;
         }
 
-        let line_slice = &file_data[pos..line_end];
+        // Handle line (exclude trailing \r if present for Windows line endings)
+        let line_end_trimmed = if line_end > pos && file_data[line_end - 1] == b'\r' {
+            line_end - 1
+        } else {
+            line_end
+        };
+
+        let line_slice = &file_data[pos..line_end_trimmed];
         let line_str = std::str::from_utf8(line_slice).unwrap_or("");
 
         if let Some((path, date)) = find_path_and_date(line_str) {
@@ -102,21 +110,39 @@ fn main() {
 
     let chunk_size = (file_size as usize) / num_workers;
 
-    let chunks: Vec<_> = (0..num_workers as usize)
-        .map(|i| {
-            let start = i * chunk_size;
-            let end = if i == num_workers as usize - 1 {
-                mmap.len()
-            } else {
-                (i + 1) * chunk_size
-            };
-            (start, end)
-        })
-        .collect();
+    // Build chunks with proper line boundary alignment
+    let mut chunks: Vec<(usize, usize)> = Vec::with_capacity(num_workers);
+    let mut current_start = 0;
+
+    for i in 0..num_workers {
+        if current_start >= mmap.len() {
+            break;
+        }
+
+        let tentative_end = if i == num_workers - 1 {
+            mmap.len()
+        } else {
+            std::cmp::min(current_start + chunk_size, mmap.len())
+        };
+
+        // Find the next newline at or after tentative_end to get a complete line
+        let actual_end = if tentative_end >= mmap.len() {
+            mmap.len()
+        } else {
+            mmap[tentative_end..]
+                .iter()
+                .position(|&b| b == b'\n')
+                .map(|pos| tentative_end + pos + 1) // +1 to include the newline
+                .unwrap_or(mmap.len())
+        };
+
+        chunks.push((current_start, actual_end));
+        current_start = actual_end;
+    }
 
     let results: Vec<_> = chunks
         .par_iter()
-        .map(|&(start, end)| process_chunk(&mmap[start..end], 0, end - start))
+        .map(|&(start, end)| process_chunk(&mmap, start, end))
         .collect();
 
     let mut merged = AggregatedData::default();

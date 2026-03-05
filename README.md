@@ -24,7 +24,7 @@ https://example.com/blog/scala-zio,2024-01-24T01:16:58+00:00
 
 | Rank | Implementation | Directory | Time |
 |------|----------------|-----------|------|
-| 🥇 | Rust | `rust/` | **0.491s** |
+| 🥇 | Rust | `rust/` | **0.508s** |
 | 🥈 | C++ | `cpp/` | **0.751s** |
 | 🥉 | Python-C++ Hybrid | `python-cpp/` | **1.1s** |
 | 4 | Bun | `bun/` | **18s** | 
