@@ -2,7 +2,7 @@ use clap::Parser;
 use memmap2::Mmap;
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::fs::File;
 use std::time::Instant;
 
@@ -16,7 +16,7 @@ struct Args {
 #[derive(Serialize, Deserialize, Clone, Default)]
 struct AggregatedData {
     #[serde(flatten)]
-    data: HashMap<String, HashMap<String, u64>>,
+    data: BTreeMap<String, BTreeMap<String, u64>>,
 }
 
 fn find_path_and_date(line: &str) -> Option<(String, String)> {
@@ -24,8 +24,10 @@ fn find_path_and_date(line: &str) -> Option<(String, String)> {
     let url = &line[..comma_pos];
     let timestamp = &line[comma_pos + 1..std::cmp::min(comma_pos + 1 + 10, line.len())];
 
-    let path_start = url.find('/').filter(|&i| i >= 8)?;
-    let path = &url[path_start..comma_pos];
+    // Search for '/' starting at offset 8 (after "https://")
+    // This finds the path separator after the domain
+    let path_start = url.get(8..)?.find('/').map(|i| i + 8)?;
+    let path = &url[path_start..];
 
     Some((path.to_string(), timestamp.to_string()))
 }
@@ -61,7 +63,7 @@ fn process_chunk(file_data: &[u8], start: usize, end: usize) -> AggregatedData {
             *result
                 .data
                 .entry(path.to_string())
-                .or_insert_with(HashMap::new)
+                .or_insert_with(BTreeMap::new)
                 .entry(date.to_string())
                 .or_insert(0) += 1;
         }
@@ -70,25 +72,6 @@ fn process_chunk(file_data: &[u8], start: usize, end: usize) -> AggregatedData {
     }
 
     result
-}
-
-fn format_output(mut data: AggregatedData) -> AggregatedData {
-    let paths: Vec<_> = data.data.keys().cloned().collect();
-
-    for path in paths {
-        let dates_map = data.data.remove(&path).unwrap();
-        let mut dates: Vec<_> = dates_map.keys().cloned().collect();
-        dates.sort();
-
-        let mut sorted_dates = HashMap::new();
-        for date in dates {
-            sorted_dates.insert(date.clone(), dates_map[&date]);
-        }
-
-        data.data.insert(path, sorted_dates);
-    }
-
-    data
 }
 
 fn main() {
@@ -148,16 +131,14 @@ fn main() {
     let mut merged = AggregatedData::default();
     for res in results {
         for (path, dates) in res.data {
-            let path_map = merged.data.entry(path).or_insert_with(HashMap::new);
+            let path_map = merged.data.entry(path).or_insert_with(BTreeMap::new);
             for (date, count) in dates {
                 *path_map.entry(date).or_insert(0) += count;
             }
         }
     }
 
-    let output = format_output(merged);
-
-    let json = serde_json::to_string(&output).expect("JSON serialization failed");
+    let json = serde_json::to_string(&merged).expect("JSON serialization failed");
     std::fs::write("output.json", json.as_bytes()).expect("Cannot write output");
 
     let duration = start_time.elapsed();
