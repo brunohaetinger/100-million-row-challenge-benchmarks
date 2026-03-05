@@ -1,0 +1,16 @@
+*.o
+*.a
+*.so
+*.dylib
+build/
+dist/
+main
+*.log
+measurements.txt
+output.json
+test_small.txt
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+compile_commands.json
